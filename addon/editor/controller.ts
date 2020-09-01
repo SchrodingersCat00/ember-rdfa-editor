@@ -296,6 +296,22 @@ export default class EditorController implements RawEditor {
     }
   }
 
+  /**
+   * set the carret on the desired position. This function ensures the caret is visible at the requested position
+   * when required it may create extra text nodes to enforce this
+   *
+   * @method setCaretInText
+   * @param {TextNode} text, a text node
+   * @param {number} offset, for a text node the relative offset within the text node (i.e. number of characters before the carret).
+   *                         for a dom element the number of childnodes before the carret.
+   * @return {DOMNode} currentNode of the editor after the operation
+   * Examples:
+   *     to set the carret before 'a' in a textnode with text content 'abcd' use setCaret(textNode,0)
+   *     to set the carret after 'c' in a textnode with text content 'abcd' use setCaret(textNode,3)
+   *     to set the carret after 'd' in a textnode with text content 'abcd' use setCaret(textNode,4)
+   *
+   * @private
+   */
   setCaretInText(text: Text, offset: number): void {
     ensureValidTextNodeForCaret(text);
     moveCaret(text, offset);
@@ -306,6 +322,23 @@ export default class EditorController implements RawEditor {
     }
   }
 
+
+    /**
+   * set the carret on the desired position. This function ensures the caret is visible at the requested position
+   * when required it may create extra text nodes to enforce this
+   *
+   * @method setCaretInElement
+   * @param {HTMLElement} element, a element
+   * @param {number} offset, for a text node the relative offset within the text node (i.e. number of characters before the carret).
+   *                         for a dom element the number of childnodes before the carret.
+   * @return {DOMNode} currentNode of the editor after the operation
+   * Examples:
+   *     to set the carret after the end of a node with innerHTML `<b>foo</b><span>work</span>` use setCaret(element, 2) (e.g setCaret(element, element.children.length))
+   *     to set the carret after the b in a node with innerHTML `<b>foo</b><span>work</span>` use setCaret(element, 1) (e.g setCaret(element, indexOfChild + 1))
+   *     to set the carret after the start of a node with innerHTML `<b>foo</b><span>work</span>` use setCaret(element, 0)
+   *
+   * @private
+   */
   setCaretInElement(element: HTMLElement, offset: number): void {
     if (element.childNodes[offset - 1] && element.childNodes[offset - 1].nodeType == Node.TEXT_NODE) {
       // node before provided position is a text node, place cursor at end of that node
@@ -728,7 +761,7 @@ export default class EditorController implements RawEditor {
   }
 
   /* Potential methods for the new API */
-  getContexts(options) {
+  getContexts(options: {region?: [number,number]}) {
     const { region } = options || {};
     if (region)
       return scanContexts(this.rootNode, region);
