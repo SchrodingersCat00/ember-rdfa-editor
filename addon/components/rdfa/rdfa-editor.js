@@ -168,15 +168,15 @@ export default class RdfaEditor extends Component {
     });
     editor.registerContentObserver(this.eventProcessor);
     editor.registerMovementObserver(this.eventProcessor);
-    this.hintsRegistry.addRegistryObserver( function(registry) {
+    this.hintsRegistry.addRegistryObserver( (registry) => {
       this.eventProcessor.handleRegistryChange(registry);
     });
 
-    this.hintsRegistry.addNewCardObserver( function(card) {
+    this.hintsRegistry.addNewCardObserver( (card) => {
       this.eventProcessor.handleNewCardInRegistry(card);
     });
 
-    this.hintsRegistry.addRemovedCardObserver( function(card) {
+    this.hintsRegistry.addRemovedCardObserver( (card) => {
       this.eventProcessor.handleRemovedCardInRegistry(card);
     });
 
