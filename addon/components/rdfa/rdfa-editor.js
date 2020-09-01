@@ -116,6 +116,12 @@ export default class RdfaEditor extends Component {
    */
   handlers = null;
 
+  /**
+   * editor controller
+   *
+   */
+  @tracked editor;
+
   init() {
     super.init(...arguments);
     this.set('handlers', A());
