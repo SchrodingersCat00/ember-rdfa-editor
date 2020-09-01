@@ -1,5 +1,5 @@
 import { warn /*, debug, deprecate*/ } from '@ember/debug';
-import { tagName, isVoidElement, invisibleSpace } from '@lblod/ember-rdfa-editor/utils/dom-helpers';
+import { isVoidElement } from '@lblod/ember-rdfa-editor/utils/dom-helpers';
 import ListBackspacePlugin from '@lblod/ember-rdfa-editor/utils/plugins/lists/backspace-plugin';
 import LumpNodeBackspacePlugin from '@lblod/ember-rdfa-editor/utils/plugins/lump-node/backspace-plugin';
 import EmptyTextNodePlugin from '@lblod/ember-rdfa-editor/utils/plugins/empty-text-node/backspace-plugin';
@@ -535,7 +535,7 @@ export default class BackspaceHandler implements InputHandler {
           // TODO: the following does not work without casting, and I'm
           // not sure we certainly have the childNode interface as per
           // https://developer.mozilla.org/en-US/docs/Web/API/ChildNode
-          moveCaretBefore(otherNode);
+          moveCaretBefore(otherNode as ChildNode);
           otherNode.parentElement.removeChild(otherNode);
           this.rawEditor.updateRichNode();
         }

@@ -1,11 +1,15 @@
-import classic from "ember-classic-decorator";
-import { layout as templateLayout } from "@ember-decorators/component";
-import { action } from "@ember/object";
-import { union, alias } from "@ember/object/computed";
+import {
+  layout as templateLayout
+} from "@ember-decorators/component";
+import {
+    tracked
+} from '@glimmer/tracking';
+import {
+    action
+} from "@ember/object";
 import Component from '@ember/component';
 import layout from '../../templates/components/ce/content-editable';
 import forgivingAction from '../../utils/ce/forgiving-action';
-import RawEditor from '../../utils/ce/raw-editor';
 import EnterHandler from '../../utils/ce/handlers/enter-handler';
 import IgnoreModifiersHandler from '../../utils/ce/handlers/ignore-modifiers-handler';
 import BackspaceHandler from '@lblod/ember-rdfa-editor/editor/input-handlers/backspace-handler';
@@ -15,15 +19,19 @@ import DeleteHandler from '../../utils/ce/handlers/delete-handler';
 import HeaderMarkdownHandler from '../../utils/ce/handlers/header-markdown-handler';
 import FallbackInputHandler from '../../utils/ce/handlers/fallback-input-handler';
 import LumpNodeMovementObserver from '../../utils/ce/movement-observers/lump-node-movement-observer';
-import LegacyMovementObserver from '../../utils/ce/movement-observers/legacy-movement-observer';
+import PositionMarkMovementObserver from '../../utils/ce/movement-observers/position-mark-movement-observer';
 import BoldItalicUnderlineHandler from '../../utils/ce/handlers/bold-italic-underline-handler';
 import UndoHandler from '../../utils/ce/handlers/undo-hander';
 import ArrowHandler from '../../utils/ce/handlers/arrow-handler';
 //import TabHandler from '../../utils/ce/handlers/tab-handler';
 import HTMLInputParser from '../../utils/html-input-parser';
-import { normalizeEvent } from 'ember-jquery-legacy';
-import { inject as service } from '@ember/service';
-import { A } from '@ember/array';
+import {
+  normalizeEvent
+} from 'ember-jquery-legacy';
+import {
+  inject as service
+} from '@ember/service';
+import EditorController from '@lblod/ember-rdfa-editor/editor/controller';
 
 /**
  * content-editable is the core of {{#crossLinkModule "rdfa-editor"}}rdfa-editor{{/crossLinkModule}}.
@@ -43,34 +51,10 @@ import { A } from '@ember/array';
  * @class ContentEditableComponent
  * @extends Component
  */
-@classic
 @templateLayout(layout)
 export default class ContentEditable extends Component {
   tagName = ''
-  @service() features;
-
-  /**
-   * latest cursor position in the contenteditable, it is aliased to the rawEditor.currentSelection
-   *
-   * @property currentSelection
-   * @type Array
-   *
-   * @private
-   */
-  @alias('rawEditor.currentSelection')
-  currentSelection;
-
-  /**
-   * latest text content in the contenteditable, it is aliased to the rawEditor.currentTextContent
-   *
-   *
-   * @property currentTextContent
-   * @type String
-   *
-   * @private
-   */
-  @alias('rawEditor.currentTextContent')
-  currentTextContent;
+  @service() features
 
   /**
    * element of the component, it is aliased to the rawEditor.rootNode
@@ -80,34 +64,14 @@ export default class ContentEditable extends Component {
    *
    * @private
    */
-  rootNode = null;
-
-  /**
-   * richNode is the rich representation of the component element,
-   * it is aliased to the rawEditor.richNode
-   *
-   * @property richNode
-   * @type RichNode
-   * @private
-   */
-  @alias('rawEditor.richNode')
-  richNode;
+  @tracked rootNode = null
 
   /**
    *
    * @property rawEditor
    * @type RawEditor
    */
-  rawEditor = null;
-
-  /**
-   * components present in the editor
-   * @property components
-   * @type {Object}
-   * @public
-   */
-  @alias('rawEditor.components')
-  components;
+  @tracked rawEditor = null
 
   /**
    * ordered set of input handlers
@@ -115,8 +79,9 @@ export default class ContentEditable extends Component {
    * @type Array
    * @public
    */
-  @union('externalHandlers', 'defaultHandlers')
-  inputHandlers;
+  get inputHandlers() {
+    return this.externalHandlers.concat(this.defaultHandlers);
+  }
 
   /**
    * default input handlers
@@ -124,59 +89,21 @@ export default class ContentEditable extends Component {
    * @type Array
    * @private
    */
-  defaultHandlers = null;
+  @tracked defaultHandlers = [];
 
   /**
-   * external input handlersg
+   * external input handlers
    * @property externalHandlers
    * @type Array
    * @private
    */
-  externalHandlers = null;
+  @tracked externalHandlers = [];
 
-  /**
-   * @constructor
-   */
-  init() {
-    super.init(...arguments);
-    const rawEditor = RawEditor.create({
-      handleFullContentUpdate: this.get('handleFullContentUpdate'),
-      textInsert: this.get('textInsert'),
-      textRemove: this.get('textRemove'),
-      elementUpdate: this.get('elementUpdate')
-    });
-    rawEditor.registerMovementObserver(new LegacyMovementObserver({notify: this.selectionUpdate}));
-    rawEditor.registerMovementObserver(new LumpNodeMovementObserver());
-    this.set('rawEditor', rawEditor);
-    const forceParagraph = this.features.isEnabled('editor-force-paragraph');
-    const defaultInputHandlers = [ new ArrowHandler({rawEditor}),
-                                   new HeaderMarkdownHandler({rawEditor}),
-                                   new EnterHandler({rawEditor}),
-                                   new BackspaceHandler({rawEditor}),
-                                   new TabHandler({rawEditor}),
-                                   new TextInputHandler({rawEditor, forceParagraph }),
-                                   new DeleteHandler({rawEditor}),
-                                   new IgnoreModifiersHandler({rawEditor}),
-                                   new UndoHandler({rawEditor}),
-                                   new BoldItalicUnderlineHandler({rawEditor}),
-                                   new FallbackInputHandler({rawEditor})
-                                 ];
-
-    this.set('currentTextContent', '');
-    this.set('defaultHandlers', defaultInputHandlers);
-    this.set('capturedEvents', A());
-    if( ! this.externalHandlers ) {
-      this.set('externalHandlers', []);
-    }
-  }
 
   didUpdateAttrs() {
-    this.rawEditor.set('textInsert',this.textInsert);
-    this.rawEditor.set('textRemove',this.textRemove);
-    this.rawEditor.set('handleFullContentUpdate',this.handleFullContentUpdate);
-    this.rawEditor.set('selectionUpdate',this.selectionUpdate);
-    this.rawEditor.set('elementUpdate',this.elementUpdate);
-    this.rawEditor.set('handleFullContentUpdate',this.handleFullContentUpdate);
+    if (!this.externalHandlers) {
+      this.externalHandlers = [];
+    }
   }
 
   /**
@@ -220,11 +147,51 @@ export default class ContentEditable extends Component {
    */
   @action
   insertedEditorElement(element) {
-    this.rawEditor.rootNode =  element;
-    this.rawEditor.updateRichNode();
-    this.rawEditor.setCurrentPosition(0);
-    this.rawEditor.generateDiffEvents.perform();
-    forgivingAction('rawEditorInit', this)(this.rawEditor);
+    this.rootNode = element;
+    this.rawEditor = new EditorController(this.rootNode);
+    const rawEditor = this.rawEditor;
+    rawEditor.registerMovementObserver(new LumpNodeMovementObserver());
+    rawEditor.registerMovementObserver(new PositionMarkMovementObserver());
+    const forceParagraph = this.features.isEnabled('editor-force-paragraph');
+    this.defaultHandlers = [
+      new ArrowHandler({
+        rawEditor
+      }),
+      new HeaderMarkdownHandler({
+        rawEditor
+      }),
+      new EnterHandler({
+        rawEditor
+      }),
+      new BackspaceHandler({
+        rawEditor
+      }),
+      new TabHandler({
+        rawEditor
+      }),
+      new TextInputHandler({
+        rawEditor,
+        forceParagraph
+      }),
+      new DeleteHandler({
+        rawEditor
+      }),
+      new IgnoreModifiersHandler({
+        rawEditor
+      }),
+      new UndoHandler({
+        rawEditor
+      }),
+      new BoldItalicUnderlineHandler({
+        rawEditor
+      }),
+      new FallbackInputHandler({
+        rawEditor
+      })
+    ];
+    if (this.rawEditorInit) {
+      this.rawEditorInit(this.rawEditor);
+    }
   }
 
   /**
@@ -234,7 +201,6 @@ export default class ContentEditable extends Component {
    *
    */
   willDestroyElement() {
-    this.set('richNode', null);
     this.set('rawEditor.rootNode', null);
     forgivingAction('elementUpdate', this)();
   }
@@ -271,8 +237,8 @@ export default class ContentEditable extends Component {
 
   @action
   handleKeyDown(event) {
-    if (! this.keydownMapsToOtherEvent(event)) {
-      const preventDefault = this.passEventToHandlers( event );
+    if (!this.keydownMapsToOtherEvent(event)) {
+      const preventDefault = this.passEventToHandlers(event);
       if (preventDefault) {
         event.preventDefault();
       }
@@ -286,7 +252,7 @@ export default class ContentEditable extends Component {
 
   @action
   handleKeyUp(event) {
-    const preventDefault = this.passEventToHandlers( event );
+    const preventDefault = this.passEventToHandlers(event);
     if (preventDefault) {
       event.preventDefault();
     }
@@ -297,7 +263,7 @@ export default class ContentEditable extends Component {
    */
   @action
   handleInput(event) {
-    const preventDefault = this.passEventToHandlers( event );
+    const preventDefault = this.passEventToHandlers(event);
     if (preventDefault)
       event.preventDefault();
   }
@@ -308,7 +274,7 @@ export default class ContentEditable extends Component {
    */
   @action
   compositionEnd(event) {
-    const preventDefault = this.passEventToHandlers( event );
+    const preventDefault = this.passEventToHandlers(event);
     if (preventDefault)
       event.preventDefault();
   }
@@ -322,49 +288,57 @@ export default class ContentEditable extends Component {
     const clipboardData = (event.clipboardData || window.clipboardData);
 
     //TODO: if no clipboardData found, do we want an error?
-    if (this.features.isEnabled('editor-html-paste') && this.hasClipboardHtmlContent(clipboardData) ) {
+    if (this.features.isEnabled('editor-html-paste') && this.hasClipboardHtmlContent(clipboardData)) {
       try {
         const inputParser = new HTMLInputParser({});
         const htmlPaste = clipboardData.getData('text/html');
         const cleanHTML = inputParser.cleanupHTML(htmlPaste);
         const sel = this.rawEditor.selectHighlight(this.rawEditor.currentSelection);
-        this.rawEditor.update(sel, {set: { innerHTML: cleanHTML } });
-      }
-      catch(e) {
+        this.rawEditor.update(sel, {
+          set: {
+            innerHTML: cleanHTML
+          }
+        });
+      } catch (e) {
         // fall back to text pasting
         console.warn(e); //eslint-disable-line no-console
         const text = this.getClipboardContentAsText(clipboardData);
         const sel = this.rawEditor.selectHighlight(this.rawEditor.currentSelection);
-        this.rawEditor.update(sel, {set: { innerHTML: text } });
+        this.rawEditor.update(sel, {
+          set: {
+            innerHTML: text
+          }
+        });
       }
-    }
-
-    else {
+    } else {
       const text = this.getClipboardContentAsText(clipboardData);
       const sel = this.rawEditor.selectHighlight(this.rawEditor.currentSelection);
-      this.rawEditor.update(sel, {set: { innerHTML: text } });
+      this.rawEditor.update(sel, {
+        set: {
+          innerHTML: text
+        }
+      });
     }
 
     event.preventDefault();
     return false;
   }
 
-  hasClipboardHtmlContent(clipboardData){
+  hasClipboardHtmlContent(clipboardData) {
     const potentialContent = clipboardData.getData('text/html') || "";
     return potentialContent.length > 0;
   }
 
-  getClipboardContentAsText(clipboardData){
+  getClipboardContentAsText(clipboardData) {
     const text = clipboardData.getData('text/plain') || "";
-    if( text.length === 0 ){
+    if (text.length === 0) {
       return clipboardData.getData('text') || "";
-    }
-    else return text;
+    } else return text;
   }
 
   @action
   beforeInput(event) {
-    const preventDefault = this.passEventToHandlers( event );
+    const preventDefault = this.passEventToHandlers(event);
     if (preventDefault) {
       event.preventDefault();
     }
@@ -388,13 +362,13 @@ export default class ContentEditable extends Component {
 
   @action
   handleMouseUp(event) {
-    const preventDefault = this.passEventToHandlers( event );
+    const preventDefault = this.passEventToHandlers(event);
     if (preventDefault)
       event.preventDefault();
   }
 
   @action
-  handleMouseDown(/* event */){
+  handleMouseDown( /* event */) {
     // not handling just yet
   }
 
@@ -412,24 +386,23 @@ export default class ContentEditable extends Component {
    */
   passEventToHandlers(event) {
     event = normalizeEvent(event);
-    const handlers = this.inputHandlers.filter( h => h.isHandlerFor(event));
+    const handlers = this.inputHandlers.filter(h => h.isHandlerFor(event));
     if (handlers.length > 0) {
       let preventDefault = false;
       for (let handler of handlers) {
         const handlerResponse = handler.handleEvent(event);
-        if (! handlerResponse.allowBrowserDefault) {
+        if (!handlerResponse.allowBrowserDefault) {
           // if one handler decided the event default (e.g. browser bubbling) should be prevented we do so.
           preventDefault = true;
         }
-        if (! handlerResponse.allowPropagation) {
+        if (!handlerResponse.allowPropagation) {
           // handler does not allow this event to be passed to other handlers return immediately
           break;
         }
       }
       this.rawEditor.generateDiffEvents.perform();
       return preventDefault;
-    }
-    else {
+    } else {
       return false;
     }
   }
@@ -440,6 +413,6 @@ export default class ContentEditable extends Component {
    * @method keydownMapsToOtherEvent
    */
   keydownMapsToOtherEvent(event) {
-    return (event.ctrlKey || event.metaKey ) && ["v","c","x"].includes(event.key);
+    return (event.ctrlKey || event.metaKey) && ["v", "c", "x"].includes(event.key);
   }
 }

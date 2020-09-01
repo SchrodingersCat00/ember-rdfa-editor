@@ -48,7 +48,7 @@ import HTMLInputParser from '../../html-input-parser';
  * The syntax for specifying items to remove works as follows:
  * - true: Removes any value to be removed.
  * - string: Removes the specific value as supplied.  If no value
- *   matches, nothing is removed.  For semantic content, translation
+ *   matches, nothing is removed.  For semantisc content, translation
  *   is done based on the current context, eg: if there is a
  *   foaf:name in the document, then suppling the string
  *   "http://xmlns.com/foaf/0.1/name" will usually mean foaf:name is
@@ -143,8 +143,8 @@ function updateEditorStateAfterUpdate(selection, relativePosition, currentNode) 
     const richNode = this.getRichNodeFor(this.currentNode);
     this.setCaret(richNode.domNode, Math.min(relativePosition, richNode.end));
   } else {
-    this.set('currentNode', null);
-    this.setCurrentPosition(this.currentPosition);
+//    this.set('currentNode', null);
+//    this.setCurrentPosition(this.currentPosition);
   }
 }
 

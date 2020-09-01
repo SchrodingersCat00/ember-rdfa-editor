@@ -1,5 +1,6 @@
 import { set } from '@ember/object';
 import { A } from '@ember/array';
+import { tracked } from '@glimmer/tracking';
 import EmberObject, { computed } from '@ember/object';
 import classic from 'ember-classic-decorator';
 import { next } from '@ember/runloop';
@@ -33,7 +34,7 @@ export default class HinstRegistry extends EmberObject {
   * @property activeRegion
   * @type Array
   */
-  activeRegion = null;
+  @tracked activeRegion = null;
 
   /**
   * @property activeHints

@@ -722,7 +722,7 @@ export default class PluginEditorApi {
    * does its best to ensure the supplied position is a valid one to
    * navigate to, and positions the cursor at that spot.
    *
-   * @method setCaret
+   * @method setCarret
    * @param {DOMNode} domNode A text node or dom element as the main
    * scope.
    * @param {number} offset Position relative to the supplied
@@ -751,5 +751,5 @@ export default class PluginEditorApi {
    *
    * @public
    */
-  setCaret(domNode, relativePostion) { this._editor.setCaret  (domNode, relativePostion);}
+  setCarret(domNode, relativePostion) { this._editor.setCaret  (domNode, relativePostion);}
 }
