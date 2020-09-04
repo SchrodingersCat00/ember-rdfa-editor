@@ -12,7 +12,8 @@ function appendChild(richNode, childNode) {
     // delete from previous parent
     const parent = childNode.parent;
     const indexOfChildNode = parent.children.indexOf(childNode);
-    parent.children.splice(indexOfChildNode,1);
+    if (indexOfChildNode >= 0)
+      parent.children.splice(indexOfChildNode,1);
   }
   richNode.children.push(childNode);
   childNode.parent = richNode;
@@ -26,10 +27,10 @@ function appendChild(richNode, childNode) {
 function replaceRichNodeWith(richNode, richNodes) {
   const parent = richNode.parent;
   if (parent) {
-    const indexOfRichNode = parent.children.indexOf(richNode);
     for (let node of richNodes) {
       node.parent = parent;
     }
+    const indexOfRichNode = parent.children.indexOf(richNode);
     parent.children.splice(indexOfRichNode, 1, ...richNodes);
     richNode.domNode.replaceWith(...richNodes.map((node) => node.domNode));
   }
