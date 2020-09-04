@@ -593,14 +593,14 @@ export default class EditorController implements RawEditor {
   }
 
   /**
- * determines best suitable node to position caret in for provided rich node and position
- * creates a text node if necessary
- * @method findSuitableNodeInRichNode
- * @param {RichNode} node
- * @param {number} position
- * @return {RichNode}
- * @private
- */
+   * determines best suitable node to position caret in for provided rich node and position
+   * creates a text node if necessary
+   * @method findSuitableNodeInRichNode
+   * @param {RichNode} node
+   * @param {number} position
+   * @return {RichNode}
+   * @private
+   */
   findSuitableNodeInRichNode(node: RichNode, position: number): RichNode | null {
     if (!node) {
       console.warn('no node provided to findSuitableNodeinRichNode'); // eslint-disable-line no-console
@@ -616,11 +616,11 @@ export default class EditorController implements RawEditor {
       return textNodeContainingPosition[0];
     }
     else {
-      const elementContainingPosition = flatMap(node, appropriateTextNodeFilter);
-      if (elementContainingPosition.length > 0) {
-        // we have to guess which element matches, taking the last matching one is a strategy that sort of works
+      const textContainingPosition = flatMap(node, appropriateTextNodeFilter);
+      if (textContainingPosition.length > 0) {
+        // we have to guess which (empty) text node matches, taking the last matching one is a strategy that sort of works
         // this gives us the deepest/last node matching. it's horrid in the case of consecutive br's for example
-        const newTextNode = nextTextNode(elementContainingPosition[elementContainingPosition.length - 1], this.rootNode);
+        const newTextNode = nextTextNode(textContainingPosition[textContainingPosition.length - 1], this.rootNode);
         this.updateRichNode();
         return this.getRichNodeFor(newTextNode);
       }
