@@ -1,4 +1,3 @@
-import RichNode from '@lblod/marawa/rich-node';
 import { isAdjacentRange, isEmptyRange } from '@lblod/marawa/range-helpers';
 import { replaceRichNodeWith, splitRichTextNode, wrapRichNode } from '../rich-node-tree-modification';
 import { runInDebug } from '@ember/debug';
@@ -777,7 +776,6 @@ function splitSelectionsToPotentiallyFitInRange([start, end], providedSelections
           }
         }
         else {
-          console.warn('no new richnodes');
           actualSelections.push(selection);
         }
       }

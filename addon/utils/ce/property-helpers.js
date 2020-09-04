@@ -2,7 +2,6 @@ import { debug, warn } from '@ember/debug';
 import flatMap from './flat-map';
 import {
   tagName,
-  unwrapElement as unwrapDOMNode,
   findWrappingSuitableNodes
 } from '@lblod/ember-rdfa-editor/utils/dom-helpers';
 import ReplaceWithPolyfill from 'mdn-polyfills/Node.prototype.replaceWith';
@@ -167,7 +166,6 @@ function applyPropertyOnNode(property, richNode, [start,end]) {
         rawApplyProperty(richNode.domNode, property);
       }
       if (maintainOffset) {
-        console.log('maintaining offset');
         window.getSelection().collapse(anchorNode, offset);
       }
     }
@@ -176,7 +174,6 @@ function applyPropertyOnNode(property, richNode, [start,end]) {
       let offset;
       if (window.getSelection().anchorNode == richNode.domNode) {
         // have to maintain cursor position if possible
-        console.log('have to maintain cursor');
         offset = window.getSelection().anchorOffset;
         maintainOffset = true;
       }
@@ -213,11 +210,10 @@ function applyPropertyOnNode(property, richNode, [start,end]) {
         const absoluteOffset = richNode.start + offset;
         const newAnchor = newRichNodes.find((node) => positionInRange(absoluteOffset, node.region));
         if (newAnchor) {
-          console.log('setting anchor', newAnchor, absoluteOffset);
           window.getSelection().collapse(newAnchor.domNode, absoluteOffset - newAnchor.start);
         }
         else {
-          console.log('offset does not fit', offset, newRichNodes);
+          debug(`could not restore cursor position`);
         }
       }
     }
