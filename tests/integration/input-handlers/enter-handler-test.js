@@ -48,7 +48,7 @@ module('Integration | InputHandler | enter-handler', function(hooks) {
     await triggerKeyEvent('div[contenteditable]', 'keydown', 'Enter');
 
     const innerHtml = editor.innerHTML;
-    assert.equal(innerHtml, '<li>baz</li><li data-editor-position-level=\"0\">​</li>');
+    assert.equal(innerHtml, '<li>baz</li><li data-editor-position-level="0">​</li>');
     const cursorPosition = window.getSelection().anchorOffset;
     assert.equal(cursorPosition, 0);
   });
