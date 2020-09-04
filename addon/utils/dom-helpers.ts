@@ -64,16 +64,10 @@ function insertTextNodeWithSpace(parentDomNode: HTMLElement, relativeToSibling: 
  * @public
  */
 function unwrapElement(node: HTMLElement): void {
-  let parent = node.parentElement;
-  let baseNode: ChildNode = node;
-  if (parent) {
-    while (baseNode.childNodes && baseNode.childNodes.length > 0) {
-      let nodeToInsert = node.childNodes[node.childNodes.length - 1];
-      parent.insertBefore(nodeToInsert, baseNode);
-      baseNode = nodeToInsert;
-    }
-    parent.removeChild(node);
+  while (node.firstChild) {
+    node.before(node.firstChild);
   }
+  node.remove();
 }
 
 /**

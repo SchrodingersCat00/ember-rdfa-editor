@@ -10,9 +10,12 @@ import RichNode from '@lblod/marawa/rich-node';
 import { isAdjacentRange } from '@lblod/marawa/range-helpers';
 import { DEFAULT_TAG_NAME } from './editor-property';
 import {
+  appendChild,
+  splitRichTextNode,
   replaceRichNodeWith,
   unwrapRichNode,
 } from './rich-node-tree-modification';
+import { positionInRange } from '@lblod/marawa/range-helpers';
 
 const IGNORABLE_ATTRIBUTES=["data-editor-position-level", "data-editor-rdfa-position-level"];
 
@@ -98,12 +101,12 @@ function createWrapperForProperty(property) {
  * @param property an editor property
  * @for PropertyHelpers
  */
-function applyProperty(selection, doc, property, calledFromCancel = false) {
+function applyProperty(selection, doc, property, shouldCancelFirst = true) {
   if (selection.selections.length === 0) {
     warn(`can't apply property to empty selection`, {id: 'content-editable.editor-property'});
     return;
   }
-  if (!calledFromCancel) {
+  if (shouldCancelFirst) {
     // cancel first to avoid duplicate tags
     cancelProperty(selection, doc, property);
   }
@@ -135,6 +138,14 @@ function applyProperty(selection, doc, property, calledFromCancel = false) {
 function applyPropertyOnNode(property, richNode, [start,end]) {
   try {
     if (richNode.type === "tag") {
+      let maintainOffset = false;
+      let offset;
+      const anchorNode = window.getSelection().anchorNode;
+      if (richNode.domNode.contains(anchorNode)) {
+        // have to maintain cursor position if possible
+        offset = window.getSelection().anchorOffset;
+        maintainOffset = true;
+      }
       const domNode = richNode.domNode;
       let wrappingDomNode;
       if (property.newContext) {
@@ -155,63 +166,64 @@ function applyPropertyOnNode(property, richNode, [start,end]) {
       else {
         rawApplyProperty(richNode.domNode, property);
       }
+      if (maintainOffset) {
+        console.log('maintaining offset');
+        window.getSelection().collapse(anchorNode, offset);
+      }
     }
     else if (richNode.type === "text") {
-      const relativeStart = Math.max(start - richNode.start, 0);
-      const relativeEnd = Math.min(end - richNode.start, richNode.text.length);
-      const [preText, infixText, postText] =
-            [ richNode.text.slice( 0, relativeStart ),
-              richNode.text.slice( relativeStart, relativeEnd ),
-              richNode.text.slice( relativeEnd ) ];
-      const prefixNode = preText == "" ? null : document.createTextNode( preText );
-      const infixNode = createWrapperForProperty(property);
-      const infixTextNode = document.createTextNode( infixText );
-      infixNode.appendChild( infixTextNode );
-      const postfixNode = postText == "" ? null : document.createTextNode( postText );
-      const newDomNodes = [prefixNode,infixNode,postfixNode].filter( (x) => x );
-      // update the DOM tree
-      richNode.domNode.replaceWith( ...newDomNodes);
-      const preRichNode = ! prefixNode ? null : new RichNode({
-        domNode: prefixNode,
+      let maintainOffset = false;
+      let offset;
+      if (window.getSelection().anchorNode == richNode.domNode) {
+        // have to maintain cursor position if possible
+        console.log('have to maintain cursor');
+        offset = window.getSelection().anchorOffset;
+        maintainOffset = true;
+      }
+      const wrappingDomNode = createWrapperForProperty(property);
+      const richNodeForWrapper = new RichNode({
+        domNode: wrappingDomNode,
         parent: richNode.parent,
         start: richNode.start,
-        end: start,
-        text: preText,
-        type: "text"
-    });
-      const infixRichNode = ! infixNode ? null : new RichNode({
-        domNode: infixNode,
-        parent: richNode.parent,
-        start,
-        end,
-        text: infixText,
-        type: "tag"
+        end: richNode.end,
+        type: "tag",
+        children: []
       });
-      infixRichNode.children = [ new RichNode({
-      domNode: infixTextNode,
-        parent: infixRichNode,
-        start,
-        end,
-        text: infixText, // TODO: remove if consuming code doesn't use the TextNodeWalker
-        type: "text"
-      }) ];
-      const postfixRichNode = ! postfixNode ? null : new RichNode({
-        domNode: postfixNode,
-        parent: richNode.parent,
-        start: end,
-        end: end + postText.length,
-        text: postText,
-        type: "text"
-    });
-      const newRichNodes = [];
-      if( preRichNode ) { newRichNodes.push( preRichNode ); }
-      newRichNodes.push( infixRichNode );
-      if( postfixRichNode ) { newRichNodes.push( postfixRichNode ); }
-      replaceRichNodeWith(richNode, newRichNodes);
+      let prefix, infix, postfix;
+      if (richNode.start < start) {
+        [ prefix, infix ] = splitRichTextNode(richNode, start);
+      }
+      if (richNode.end > end) {
+        if (infix) {
+          [infix, postfix] = splitRichTextNode(infix, end);
+        }
+        else {
+          [infix, postfix] = splitRichTextNode(richNode, end);
+        }
+      }
+      let newRichNodes = [prefix, infix, postfix].filter((x) => !!x);
+      if (newRichNodes.length == 0) {
+        newRichNodes = [richNode];
+      }
+      replaceRichNodeWith(richNode, [richNodeForWrapper]);
+      for (let newRichNode of newRichNodes) {
+        appendChild(richNodeForWrapper, newRichNode);
+      }
+      if (maintainOffset) {
+        const absoluteOffset = richNode.start + offset;
+        const newAnchor = newRichNodes.find((node) => positionInRange(absoluteOffset, node.region));
+        if (newAnchor) {
+          console.log('setting anchor', newAnchor, absoluteOffset);
+          window.getSelection().collapse(newAnchor.domNode, absoluteOffset - newAnchor.start);
+        }
+        else {
+          console.log('offset does not fit', offset, newRichNodes);
+        }
+      }
     }
   }
   catch(e) {
-    console.warn(e); // eslint-disable-line no-console
+    console.trace(e); // eslint-disable-line no-console
   }
 }
 
@@ -220,9 +232,15 @@ function applyPropertyOnNode(property, richNode, [start,end]) {
  */
 function rawCancelProperty(richNode, property) {
   if (richNode.type === 'tag') {
+    const anchorNode = window.getSelection().anchorNode;
+    let offset, maintainOffset;
+    if (richNode.domNode.contains(anchorNode)) {
+      // have to maintain cursor position if possible
+      offset = window.getSelection().anchorOffset;
+      maintainOffset = true;
+    }
     if (domNodeIsEqualToProperty(richNode.domNode,property)) {
       // dom node matches the property completely, no extra info set
-      unwrapDOMNode(richNode.domNode);
       unwrapRichNode(richNode);
     }
     else if (domNodeContainsProperty(richNode.domNode, property)) {
@@ -259,6 +277,10 @@ function rawCancelProperty(richNode, property) {
         if (child.type === 'tag')
           rawCancelProperty(child, property);
       }
+    }
+    if (maintainOffset) {
+      console.log('maintaining offset');
+      window.getSelection().collapse(anchorNode, offset);
     }
   }
   else {
@@ -335,12 +357,12 @@ function cancelProperty(selection, doc, property) {
         if (currentNode.start < start) {
           // reapply property on prefix
           const sel = doc.selectHighlight([currentNode.start, start]);
-          applyProperty(sel, doc, property, true);
+          applyProperty(sel, doc, property, false);
         }
         if (currentNode.end > end) {
           // reapply property on postfix
           const sel = doc.selectHighlight([ end, currentNode.end]);
-          applyProperty(sel, doc, property, true);
+          applyProperty(sel, doc, property, false);
         }
       }
       else if (propertyIsEnabledOnLeafNodes(currentNode, property)) {

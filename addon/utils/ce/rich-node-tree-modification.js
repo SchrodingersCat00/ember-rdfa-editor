@@ -1,12 +1,41 @@
 import RichNode from '@lblod/marawa/rich-node';
 
+/**
+ * rich node helpers (might one day be defined on richnode)
+ * TODO: ideally all these operations would apply to both the richNode and the underlying domNode
+ * TODO: ideally these operations would try to maintain cursor position (but doubt that's feasible)
+ * TODO: this code will likely benefit from being converted to typescript
+ */
+
+function appendChild(richNode, childNode) {
+  if (childNode.parent) {
+    // delete from previous parent
+    const parent = childNode.parent;
+    const indexOfChildNode = parent.children.indexOf(childNode);
+    parent.children.splice(indexOfChildNode,1);
+  }
+  richNode.children.push(childNode);
+  childNode.parent = richNode;
+  richNode.domNode.appendChild(childNode.domNode);
+}
+
+/**
+ * replace a richNode in a tree
+ * very basic function that assumes the ranges are not affected by the replacement
+ */
 function replaceRichNodeWith(richNode, richNodes) {
   const parent = richNode.parent;
-  const indexOfRichNode = parent.children.indexOf(richNode);
-  for (let node of richNodes) {
-    node.parent = parent;
+  if (parent) {
+    const indexOfRichNode = parent.children.indexOf(richNode);
+    for (let node of richNodes) {
+      node.parent = parent;
+    }
+    parent.children.splice(indexOfRichNode, 1, ...richNodes);
+    richNode.domNode.replaceWith(...richNodes.map((node) => node.domNode));
   }
-  parent.children.splice(indexOfRichNode, 1, ...richNodes);
+  else {
+    console.trace(`can't replace richNode because it has no parent`, richNode); //eslint-disable-line no-console
+  }
 }
 
 /**
@@ -23,6 +52,7 @@ function splitRichTextNode(richNode, offset) {
   const relativeOffset = offset - richNode.start;
   const prefixDomNode = document.createTextNode(textContent.slice(0, relativeOffset));
   const prefixRichNode = new RichNode({
+    parent: richNode.parent,
     domNode: prefixDomNode,
     start: richNode.start,
     end: richNode.start + relativeOffset,
@@ -31,6 +61,7 @@ function splitRichTextNode(richNode, offset) {
   });
   const postfixDomNode = document.createTextNode(textContent.slice(relativeOffset));
   const postfixRichNode = new RichNode({
+    parent: richNode.parent,
     domNode: postfixDomNode,
     start: richNode.start + relativeOffset,
     end: richNode.end,
@@ -108,4 +139,4 @@ function unwrapRichNode(richNode) {
   replaceRichNodeWith(richNode, richNode.children);
 }
 
-export { replaceRichNodeWith, wrapRichNode, unwrapRichNode, mergeSiblings, mergeSiblingTextNodes, splitRichTextNode };
+export { replaceRichNodeWith, wrapRichNode, unwrapRichNode, mergeSiblings, mergeSiblingTextNodes, splitRichTextNode, appendChild };

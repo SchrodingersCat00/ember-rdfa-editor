@@ -772,9 +772,6 @@ function splitSelectionsToPotentiallyFitInRange([start, end], providedSelections
         const newRichNodes = [prefix, infix, postfix].filter((x) => !!x);
         if (newRichNodes.length > 0 ) {
           replaceRichNodeWith(richNode, newRichNodes);
-          // TODO: should this be done by replaceRichNodeWith ?
-          const newDomNodes = newRichNodes.map( (node) => node.domNode);
-          richNode.domNode.replaceWith(...newDomNodes);
           for (let newRichNode of newRichNodes) {
             actualSelections.push({range: newRichNode.region, richNode: newRichNode});
           }

@@ -588,48 +588,8 @@ export default class EditorController implements RawEditor {
     }
     // NOTE: we assume applying a highlight does not update any text ranges, e.g. start and end of all nodes remains the same
     // TODO: this entire function seems to assume a position and not a selection
-    const richNodeContainingCursor = this.getRichNodeFor(this.currentNode);
     const selection = this.selectHighlight([start, end]);
     applyProperty(selection, this, highlightProperty); // TODO: replace 'this' with proper interface
-    // reset the cursor so the browser shows cursor in the correct position
-    if (richNodeContainingCursor)
-      this.resetCursor(richNodeContainingCursor);
-  }
-
-  /**
-   * reposition cursor based on available information,
-   * useful if you modified the tree (splitting up text nodes for example),
-   * but did not change the text content.
-   * this will try to somewhat smartly place the cursor where it should be.
-   * NOTE: if the currentSelection was a selection, this will place the cursor at the end of the selection!
-   * NOTE: revisit this behaviour if/when the editor supports setting an actual selection and not a cursor position
-   *
-   * @param oldRichNodecontainingCursor the richnode the cursor was in before you started modifying the tree.
-   * @method resetCursor
-   * @private
-   */
-  resetCursor(oldRichNodecontainingCursor: RichNode): void {
-    const richNode = this.getRichNodeFor(this.currentNode);
-    const currentPosition = this.currentSelection[1];
-    if (richNode && richNode.start >= currentPosition && richNode.end <= currentPosition) {
-      this.setCaret(richNode.domNode, Math.max(0, currentPosition - richNode.start));
-    }
-    else if (oldRichNodecontainingCursor) {
-      // domNode containing cursor no longer exists, we have to reset the cursor in a different node
-      // first let's try to find a parent that still exists
-      let newNode = oldRichNodecontainingCursor;
-      while (newNode && newNode.domNode != this.rootNode && !this.rootNode.contains(newNode.domNode)) {
-        newNode = newNode.parent;
-      }
-      // set the currentnode to that parent for better positioning
-      const parentRichNode = getRichNodeMatchingDomNode(newNode, this.richNode) || this.richNode;
-      this.setCurrentPosition(currentPosition, parentRichNode);
-
-    }
-    else {
-      console.debug("have to guess cursor position, no previous richnode was provided!"); // eslint-disable-line no-console
-      this.setCurrentPosition(currentPosition);
-    }
   }
 
   /**
@@ -731,8 +691,6 @@ export default class EditorController implements RawEditor {
     for (let location of locations) {
       cancelProperty(this.selectHighlight(location), this, highlightProperty); // todo: replace 'this' with proper interface
     }
-    if (currentNode)
-      this.resetCursor(currentNode);
   }
 
   /**
