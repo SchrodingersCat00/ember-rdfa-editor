@@ -80,6 +80,19 @@ export function moveCaretBefore(child: ChildNode) : null | Selection {
   }
 }
 
+export function moveCaretAfter(child: ChildNode) : null | Selection {
+  const parentElement = child.parentElement;
+  if (parentElement) {
+    const indexOfChild = Array.from(parentElement.childNodes).indexOf(child);
+    //Note: index is always <= position, so no off by one possible
+    return moveCaret(parentElement, indexOfChild + 1);
+  }
+  else {
+    console.warn('trying to move cursor before a child that is no longer connected to the dom tree');
+    return null;
+  }
+}
+
 /**
  * determines if an element has visible children
  *
