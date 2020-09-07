@@ -185,7 +185,14 @@ function selectContext([start,end], options = {}) {
   }
 
   if ( options.scope == 'outer' || ( options.scope == 'auto' && !foundInnerMatch ) ) {
-    selections = filterOuter(rdfaBlocks, filter, [start, end]);
+    /* The rdfaBlocks returned by the context scanner don't include the upper part of the dom tree.
+       As we are filtering on an outer scope, we might need those parent blocks. */
+    let parentBlocks = [];
+    rdfaBlocks.forEach(block => {
+      parentBlocks = parentBlocks.concat(block.getParentBlocks(block));
+    });
+
+    selections = filterOuter(rdfaBlocks.concat(parentBlocks), filter, [start, end]);
   }
 
   return { selections };
@@ -365,7 +372,7 @@ function filterOuter(blocks, filter, [start, end]) {
   let selections = [];
 
   blocks
-    .filter(block => block.semanticNode.rdfaAttributes)
+    .filter(block => block.semanticNode && block.semanticNode.rdfaAttributes)
     .filter(block => block.semanticNode.containsRegion(start, end))
     .forEach( function(block) {
       if ( isMatchingContext(block, filter) ) {
